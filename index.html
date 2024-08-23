@@ -88,6 +88,15 @@
         .chat-item:hover {
             background: #f0f0f0;
         }
+        .delete-btn {
+    background-color: red;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 10px;
+}
     </style>
 </head>
 <body>
@@ -118,21 +127,49 @@
     const editTitleBtn = document.getElementById('edit-title-btn');
 
     function loadChatList() {
-        const chats = JSON.parse(localStorage.getItem('chats')) || [];
-        sidebar.innerHTML = '';
+    const chats = JSON.parse(localStorage.getItem('chats')) || [];
+    sidebar.innerHTML = '';
 
-        chats.forEach((chat, index) => {
-            const chatItem = document.createElement('div');
-            chatItem.className = 'chat-item';
-            chatItem.innerText = chat.title || `Chat ${index + 1}`;
-            chatItem.onclick = () => loadChat(index);
-            sidebar.appendChild(chatItem);
-        });
+    chats.forEach((chat, index) => {
+        const chatItem = document.createElement('div');
+        chatItem.className = 'chat-item';
+        chatItem.innerText = chat.title || `Chat ${index + 1}`;
+        
+        const deleteBtn = document.createElement('button');
+        deleteBtn.innerText = 'Xóa';
+        deleteBtn.className = 'delete-btn'; 
+        deleteBtn.onclick = () => {
+            if (confirm("Bạn có chắc chắn muốn xóa đoạn chat này?")) {
+                deleteChat(index);
+            }
+        };
+
+        chatItem.appendChild(deleteBtn);
+        chatItem.onclick = () => loadChat(index);
+        sidebar.appendChild(chatItem);
+    });
+}
+
+function deleteChat(index) {
+    const chats = JSON.parse(localStorage.getItem('chats')) || [];
+    chats.splice(index, 1); // Xóa đoạn chat tại chỉ số index
+    localStorage.setItem('chats', JSON.stringify(chats));
+    loadChatList();
+
+    // Nếu đoạn chat bị xóa là chat hiện tại, chuyển sang chat trước đó hoặc tạo chat mới
+    const currentChatIndex = localStorage.getItem('currentChatIndex');
+    if (currentChatIndex == index) {
+        if (chats.length > 0) {
+            loadChat(Math.max(0, index - 1)); // Chuyển sang chat trước đó
+        } else {
+            createNewChat(); // Tạo chat mới nếu không còn chat nào
+        }
     }
+}
 
     function loadChat(index) {
         const chats = JSON.parse(localStorage.getItem('chats')) || [];
-        chatContainer.innerHTML = ''; // Xóa nội dung hiện tại
+        chatContainer.innerHTML = '';
 
         const chat = chats[index];
         chat.messages.forEach(message => {
@@ -140,8 +177,9 @@
             addMessage(message.bot, 'bot');
         });
 
-        titleText.innerText = chat.title || `Chat ${index + 1}`; // Cập nhật tiêu đề
+        titleText.innerText = chat.title || `Chat ${index + 1}`;
         input.value = '';
+        localStorage.setItem('currentChatIndex', index);
     }
 
     function addMessage(text, type) {
@@ -149,7 +187,7 @@
         message.className = `message ${type}`;
         message.innerText = text;
         chatContainer.appendChild(message);
-        chatContainer.scrollTop = chatContainer.scrollHeight; // Tự động cuộn xuống
+        chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
     function handleSend() {
@@ -158,26 +196,26 @@
             addMessage(userMessage, 'user');
             input.value = '';
 
-            const botResponse = "Đang thi công"; // Phản hồi từ bot
+            const botResponse = "Đang thi công";
             addMessage(botResponse, 'bot');
 
             const chats = JSON.parse(localStorage.getItem('chats')) || [];
             if (chats.length === 0 || !Array.isArray(chats[chats.length - 1].messages)) {
-                chats.push({ title: `Chat ${chats.length + 1}`, messages: [] }); // Tạo một chat mới
+                chats.push({ title: `Chat ${chats.length + 1}`, messages: [] });
             }
             chats[chats.length - 1].messages.push({ user: userMessage, bot: botResponse });
             localStorage.setItem('chats', JSON.stringify(chats));
-            loadChatList(); // Cập nhật danh sách chat
+            loadChatList();
+            localStorage.setItem('currentChatIndex', chats.length - 1); // Cập nhật chỉ số chat gần nhất
         }
     }
 
     function createNewChat() {
-        const chats = JSON.parse(localStorage.getItem('chats')) || [];
-        chats.push({ title: `Chat ${chats.length + 1}`, messages: [] });
-        localStorage.setItem('chats', JSON.stringify(chats));
-        loadChatList(); // Cập nhật danh sách chat
-        chatContainer.innerHTML = ''; // Xóa nội dung chat
-        input.value = ''; // Xóa input
+    const chats = JSON.parse(localStorage.getItem('chats')) || [];
+    chats.push({ title: `Chat ${chats.length + 1}`, messages: [] });
+    localStorage.setItem('chats', JSON.stringify(chats));
+    loadChatList();
+    loadChat(chats.length - 1); // Chuyển sang đoạn chat mới
     }
 
     function editTitle() {
@@ -188,8 +226,8 @@
             if (currentChatIndex !== -1) {
                 chats[currentChatIndex].title = newTitle;
                 localStorage.setItem('chats', JSON.stringify(chats));
-                titleText.innerText = newTitle; // Cập nhật tiêu đề hiển thị
-                loadChatList(); // Cập nhật danh sách chat
+                titleText.innerText = newTitle;
+                loadChatList();
             }
         }
     }
@@ -201,7 +239,15 @@
     newChatBtn.addEventListener('click', createNewChat);
     editTitleBtn.addEventListener('click', editTitle);
 
-    loadChatList(); // Tải danh sách chat khi khởi động
+    // Tải danh sách chat và trạng thái chat hiện tại
+    loadChatList();
+    const currentChatIndex = localStorage.getItem('currentChatIndex');
+    if (currentChatIndex !== null) {
+        loadChat(parseInt(currentChatIndex));
+    } else {
+        // Nếu không có chat nào trước đó, tạo chat mới
+        createNewChat();
+    }
 </script>
 
 </body>
