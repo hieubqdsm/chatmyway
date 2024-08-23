@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            background-color: #f0f0f0;
+            margin: 0;
+        }
+        #sidebar {
+            width: 250px;
+            background: white;
+            border-right: 1px solid #ccc;
+            padding: 10px;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        #chat-container {
+            flex: 1;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        #chat-title {
+            background: #007bff;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            position: relative;
+        }
+        #edit-title-btn {
+            position: absolute;
+            right: 10px;
+            top: 5px;
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+        }
+        #messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .message {
+            margin: 10px 0;
+        }
+        .user {
+            text-align: right;
+            color: blue;
+        }
+        .bot {
+            text-align: left;
+            color: gray;
+        }
+        #input-container {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid #ccc;
+        }
+        #input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        #send-btn, #new-chat-btn {
+            padding: 10px 20px;
+            margin-left: 10px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #send-btn:hover, #new-chat-btn:hover {
+            background-color: #0056b3;
+        }
+        .chat-item {
+            padding: 5px;
+            cursor: pointer;
+        }
+        .chat-item:hover {
+            background: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+
+<div id="sidebar">
+    <button id="new-chat-btn">Tạo đoạn chat mới</button>
+    <div id="chat-list"></div>
+</div>
+<div id="chat-container">
+    <div id="chat-title">
+        <span id="title-text">Chat Box</span>
+        <button id="edit-title-btn">Sửa</button>
+    </div>
+    <div id="messages"></div>
+    <div id="input-container">
+        <input type="text" id="input" placeholder="Nhập tin nhắn...">
+        <button id="send-btn">Gửi</button>
+    </div>
+</div>
+
+<script>
+    const sidebar = document.getElementById('chat-list');
+    const chatContainer = document.getElementById('messages');
+    const input = document.getElementById('input');
+    const sendBtn = document.getElementById('send-btn');
+    const newChatBtn = document.getElementById('new-chat-btn');
+    const titleText = document.getElementById('title-text');
+    const editTitleBtn = document.getElementById('edit-title-btn');
+
+    function loadChatList() {
+        const chats = JSON.parse(localStorage.getItem('chats')) || [];
+        sidebar.innerHTML = '';
+
+        chats.forEach((chat, index) => {
+            const chatItem = document.createElement('div');
+            chatItem.className = 'chat-item';
+            chatItem.innerText = chat.title || `Chat ${index + 1}`;
+            chatItem.onclick = () => loadChat(index);
+            sidebar.appendChild(chatItem);
+        });
+    }
+
+    function loadChat(index) {
+        const chats = JSON.parse(localStorage.getItem('chats')) || [];
+        chatContainer.innerHTML = ''; // Xóa nội dung hiện tại
+
+        const chat = chats[index];
+        chat.messages.forEach(message => {
+            addMessage(message.user, 'user');
+            addMessage(message.bot, 'bot');
+        });
+
+        titleText.innerText = chat.title || `Chat ${index + 1}`; // Cập nhật tiêu đề
+        input.value = '';
+    }
+
+    function addMessage(text, type) {
+        const message = document.createElement('div');
+        message.className = `message ${type}`;
+        message.innerText = text;
+        chatContainer.appendChild(message);
+        chatContainer.scrollTop = chatContainer.scrollHeight; // Tự động cuộn xuống
+    }
+
+    function handleSend() {
+        const userMessage = input.value.trim();
+        if (userMessage) {
+            addMessage(userMessage, 'user');
+            input.value = '';
+
+            const botResponse = "Đang thi công"; // Phản hồi từ bot
+            addMessage(botResponse, 'bot');
+
+            const chats = JSON.parse(localStorage.getItem('chats')) || [];
+            if (chats.length === 0 || !Array.isArray(chats[chats.length - 1].messages)) {
+                chats.push({ title: `Chat ${chats.length + 1}`, messages: [] }); // Tạo một chat mới
+            }
+            chats[chats.length - 1].messages.push({ user: userMessage, bot: botResponse });
+            localStorage.setItem('chats', JSON.stringify(chats));
+            loadChatList(); // Cập nhật danh sách chat
+        }
+    }
+
+    function createNewChat() {
+        const chats = JSON.parse(localStorage.getItem('chats')) || [];
+        chats.push({ title: `Chat ${chats.length + 1}`, messages: [] });
+        localStorage.setItem('chats', JSON.stringify(chats));
+        loadChatList(); // Cập nhật danh sách chat
+        chatContainer.innerHTML = ''; // Xóa nội dung chat
+        input.value = ''; // Xóa input
+    }
+
+    function editTitle() {
+        const newTitle = prompt("Nhập tiêu đề mới:", titleText.innerText);
+        if (newTitle) {
+            const chats = JSON.parse(localStorage.getItem('chats')) || [];
+            const currentChatIndex = chats.findIndex(chat => chat.title === titleText.innerText);
+            if (currentChatIndex !== -1) {
+                chats[currentChatIndex].title = newTitle;
+                localStorage.setItem('chats', JSON.stringify(chats));
+                titleText.innerText = newTitle; // Cập nhật tiêu đề hiển thị
+                loadChatList(); // Cập nhật danh sách chat
+            }
+        }
+    }
+
+    sendBtn.addEventListener('click', handleSend);
+    input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleSend();
+    });
+    newChatBtn.addEventListener('click', createNewChat);
+    editTitleBtn.addEventListener('click', editTitle);
+
+    loadChatList(); // Tải danh sách chat khi khởi động
+</script>
+
+</body>
+</html>
